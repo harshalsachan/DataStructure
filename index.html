@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BST Visualizer</title>
+  <style>
+    /* ─── CSS Variables for theming ─────────────────────────────── */
+    :root[data-theme="dark"] {
+      --bg-primary:   #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card:      #1e293b;
+      --bg-card2:     #0f172a;
+      --text-primary: #e2e8f0;
+      --text-muted:   #94a3b8;
+      --accent:       #6366f1;
+      --border:       #334155;
+      --svg-bg:       #0a1628;
+      --edge-color:   #334155;
+      --scrollbar:    #334155;
+    }
+    :root[data-theme="light"] {
+      --bg-primary:   #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card:      #f1f5f9;
+      --bg-card2:     #ffffff;
+      --text-primary: #1e293b;
+      --text-muted:   #64748b;
+      --accent:       #6366f1;
+      --border:       #e2e8f0;
+      --svg-bg:       #f8fafc;
+      --edge-color:   #cbd5e1;
+      --scrollbar:    #cbd5e1;
+    }
+
+    /* ─── Reset & Base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background .3s, color .3s;
+      overflow: hidden;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    .header {
+      height: 56px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 10;
+    }
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
+    }
+    .header-right { display: flex; gap: .5rem; align-items: center; }
+
+    /* ─── Buttons ────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .35rem;
+      padding: .45rem .9rem;
+      border: none;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+    .btn:not(:disabled):hover { transform: translateY(-1px); }
+    .btn:not(:disabled):active { transform: translateY(0); }
+    .btn-icon { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+    .btn-icon:not(:disabled):hover { background: var(--border); }
+    .btn-blue   { background: #3b82f6; color: #fff; }
+    .btn-blue:not(:disabled):hover   { background: #2563eb; }
+    .btn-green  { background: #22c55e; color: #fff; }
+    .btn-green:not(:disabled):hover  { background: #16a34a; }
+    .btn-red    { background: #ef4444; color: #fff; }
+    .btn-red:not(:disabled):hover    { background: #dc2626; }
+    .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-purple:not(:disabled):hover { background: #7c3aed; }
+    .btn-amber  { background: #f59e0b; color: #fff; }
+    .btn-amber:not(:disabled):hover  { background: #d97706; }
+    .btn-full   { width: 100%; }
+    .btn-sm     { padding: .38rem .75rem; font-size: .78rem; }
+
+    /* ─── Main Layout ─────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: calc(100vh - 56px);
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      padding: 1rem;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+
+    .section-label {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--text-muted);
+      margin-bottom: .5rem;
+    }
+    .input-row { display: flex; gap: .4rem; }
+    input[type="number"] {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: .45rem .7rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type="number"]:focus { border-color: var(--accent); }
+    input[type="number"]:disabled { opacity: .45; }
+
+    .trav-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .4rem;
+    }
+
+    /* ─── Speed Slider ───────────────────────────────────────────── */
+    .slider-wrap { display: flex; align-items: center; gap: .5rem; }
+    .slider-wrap label { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #6366f1;
+      cursor: pointer;
+    }
+
+    /* ─── Metrics ────────────────────────────────────────────────── */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .metric-card {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .65rem .5rem;
+      text-align: center;
+    }
+    .metric-val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #60a5fa;
+    }
+    .metric-lbl {
+      font-size: .62rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-top: .15rem;
+    }
+
+    /* ─── Legend ─────────────────────────────────────────────────── */
+    .legend { display: flex; flex-direction: column; gap: .4rem; }
+    .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--text-muted); }
+    .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── Traversal result ───────────────────────────────────────── */
+    .trav-result {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .6rem .75rem;
+      font-size: .78rem;
+      color: var(--text-muted);
+      min-height: 36px;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* ─── SVG Area ───────────────────────────────────────────────── */
+    .viz-area {
+      display: flex;
+      flex-direction: column;
+      background: var(--svg-bg);
+      overflow: hidden;
+      transition: background .3s;
+      position: relative;
+    }
+    #tree-svg {
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    /* ─── Message Bar ────────────────────────────────────────────── */
+    .msg-bar {
+      height: 44px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: 0 1rem;
+      font-size: .83rem;
+      flex-shrink: 0;
+    }
+    .msg-icon { font-size: 1rem; }
+    .msg-text { color: var(--text-primary); }
+
+    /* ─── Tooltip ────────────────────────────────────────────────── */
+    #tooltip {
+      position: fixed;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .5rem .75rem;
+      font-size: .78rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      line-height: 1.6;
+    }
+    #tooltip.show { opacity: 1; }
+
+    /* ─── Empty State ────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: .75rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .empty-state .icon { font-size: 4rem; opacity: .3; }
+    .empty-state p   { font-size: .9rem; }
+
+    /* ─── SVG Node Animations ─────────────────────────────────────── */
+    @keyframes pop-in {
+      0%   { r: 0;   opacity: 0; }
+      60%  { r: 28px; }
+      80%  { r: 21px; }
+      100% { r: 24px; opacity: 1; }
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.18); }
+    }
+    @keyframes fade-out {
+      from { opacity: 1; transform: scale(1); }
+      50%  { opacity: .6; transform: scale(1.2); }
+      to   { opacity: 0; transform: scale(0); }
+    }
+    .anim-pop  { animation: pop-in .45s cubic-bezier(.17,.67,.83,.67) forwards; }
+    .anim-pulse { animation: pulse .35s ease-in-out; }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      body { overflow: auto; }
+      .layout { grid-template-columns: 1fr; grid-template-rows: auto 380px; height: auto; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); max-height: 480px; }
+      .viz-area { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+<!-- ─── Header ──────────────────────────────────────────────────── -->
+<header class="header">
+  <h1>🌳 Binary Search Tree Visualizer</h1>
+  <div class="header-right">
+    <button class="btn btn-icon btn-sm" id="themeBtn" onclick="toggleTheme()">☀️ Light</button>
+    <button class="btn btn-icon btn-sm" onclick="exportJSON()">📄 JSON</button>
+    <button class="btn btn-icon btn-sm" onclick="exportImage()">🖼 PNG</button>
+  </div>
+</header>
+
+<!-- ─── Main Layout ─────────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Insert -->
+    <div>
+      <div class="section-label">Insert</div>
+      <div style="display:flex; flex-direction:column; gap:.45rem;">
+        <div class="input-row">
+          <input type="number" id="insertVal" placeholder="Value…" min="-9999" max="9999" />
+          <button class="btn btn-green btn-sm" onclick="doInsert()">Insert</button>
+        </div>
+        <div class="input-row">
+          <input type="number" id="randCount" placeholder="Count" value="8" min="1" max="25" />
+          <button class="btn btn-icon btn-sm" onclick="doRandom()">🎲 Random</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete / Search -->
+    <div>
+      <div class="section-label">Delete / Search</div>
+      <div style="display:flex; flex-direction:column; gap:.45rem;">
+        <div class="input-row">
+          <input type="number" id="deleteVal" placeholder="Value…" min="-9999" max="9999" />
+          <button class="btn btn-red btn-sm" onclick="doDelete()">Delete</button>
+        </div>
+        <div class="input-row">
+          <input type="number" id="searchVal" placeholder="Value…" min="-9999" max="9999" />
+          <button class="btn btn-blue btn-sm" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traversals -->
+    <div>
+      <div class="section-label">Traversals</div>
+      <div class="trav-grid">
+        <button class="btn btn-purple btn-sm btn-full" onclick="doTraversal('inorder')">Inorder</button>
+        <button class="btn btn-purple btn-sm btn-full" onclick="doTraversal('preorder')">Preorder</button>
+        <button class="btn btn-purple btn-sm btn-full" onclick="doTraversal('postorder')">Postorder</button>
+        <button class="btn btn-purple btn-sm btn-full" onclick="doTraversal('levelorder')">Level-Order</button>
+      </div>
+      <div class="trav-result" id="travResult" style="margin-top:.5rem;">Result will appear here…</div>
+    </div>
+
+    <!-- Speed -->
+    <div>
+      <div class="section-label">Animation Speed</div>
+      <div class="slider-wrap">
+        <label>Slow</label>
+        <input type="range" id="speedRange" min="150" max="1800" value="750" step="50"
+               oninput="setSpeed(this.value)" />
+        <label>Fast</label>
+      </div>
+      <div style="text-align:center; font-size:.75rem; color:var(--text-muted); margin-top:.25rem;" id="speedLbl">750 ms / step</div>
+      <button class="btn btn-red btn-sm btn-full" id="stopBtn" style="margin-top:.5rem;"
+              onclick="stopAnim()" disabled>⏹ Stop</button>
+    </div>
+
+    <!-- Metrics -->
+    <div>
+      <div class="section-label">Tree Metrics</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="mHeight">0</div>
+          <div class="metric-lbl">Height</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mNodes">0</div>
+          <div class="metric-lbl">Nodes</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mCmp">0</div>
+          <div class="metric-lbl">Comparisons</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mBal">—</div>
+          <div class="metric-lbl">Balanced</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div>
+      <div class="section-label">Controls</div>
+      <button class="btn btn-red btn-sm btn-full" onclick="clearTree()">🗑 Clear Tree</button>
+    </div>
+
+    <!-- Legend -->
+    <div>
+      <div class="section-label">Legend</div>
+      <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#3b82f6"></div>Default</div>
+        <div class="legend-item"><div class="dot" style="background:#22c55e"></div>Inserted / Found</div>
+        <div class="legend-item"><div class="dot" style="background:#f59e0b"></div>Comparing</div>
+        <div class="legend-item"><div class="dot" style="background:#f97316"></div>Search path</div>
+        <div class="legend-item"><div class="dot" style="background:#ef4444"></div>Deleting</div>
+        <div class="legend-item"><div class="dot" style="background:#8b5cf6"></div>Traversing</div>
+        <div class="legend-item"><div class="dot" style="background:#64748b"></div>Already visited</div>
+      </div>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- Visualization -->
+  <div class="viz-area" id="vizArea">
+    <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,.35)"/>
+        </filter>
+      </defs>
+      <g id="g-edges"></g>
+      <g id="g-nodes"></g>
+      <g id="g-empty">
+        <text id="empty-txt" x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+              fill="rgba(148,163,184,.3)" font-size="18" font-family="Segoe UI,sans-serif">
+          Insert values to build the tree
+        </text>
+      </g>
+    </svg>
+    <div class="msg-bar">
+      <span class="msg-icon" id="msgIcon">ℹ️</span>
+      <span class="msg-text"  id="msgText">Welcome! Use the sidebar to insert, delete, or search values.</span>
+    </div>
+  </div><!-- /viz-area -->
+
+</div><!-- /layout -->
+
+<div id="tooltip"></div>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════
+   NODE COLORS
+═══════════════════════════════════════════════ */
+const C = {
+  DEFAULT:    '#3b82f6',
+  COMPARING:  '#f59e0b',
+  PATH:       '#f97316',
+  FOUND:      '#22c55e',
+  INSERTING:  '#22c55e',
+  DELETING:   '#ef4444',
+  TRAVERSING: '#8b5cf6',
+  VISITED:    '#64748b',
+};
+
+/* ═══════════════════════════════════════════════
+   BST DATA STRUCTURE
+═══════════════════════════════════════════════ */
+class BSTNode {
+  constructor(val) {
+    this.val   = val;
+    this.left  = null;
+    this.right = null;
+    /* layout coords (set by calcPositions) */
+    this.x = 0;
+    this.y = 0;
+  }
+}
+
+class BST {
+  constructor() {
+    this.root = null;
+    this.size = 0;
+  }
+
+  /* ── insert ─────────────────────────────────── */
+  insertSteps(v) {
+    const steps = [];
+    if (this.root === null) {
+      this.root = new BSTNode(v);
+      this.size++;
+      steps.push({ type:'insert', val:v, cmp:0,
+        hi:[{ v, c:C.INSERTING }],
+        msg:`Inserting ${v}: tree was empty → placed at root.` });
+      return steps;
+    }
+    let cur = this.root, cmp = 0;
+    const path = [];
+    while (true) {
+      cmp++;
+      path.push(cur.val);
+      steps.push({ type:'compare', val:cur.val, cmp,
+        hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v:cur.val, c:C.COMPARING }],
+        msg:`Comparing ${v} with ${cur.val} (step ${cmp}): ${v < cur.val ? v+' < '+cur.val+' → go left' : v > cur.val ? v+' > '+cur.val+' → go right' : 'equal'}` });
+      if (v === cur.val) {
+        steps.push({ type:'dup', val:v, cmp,
+          hi:[...path.map(x=>({v:x,c:C.PATH}))],
+          msg:`⚠️  ${v} already exists in the tree.` });
+        return steps;
+      }
+      if (v < cur.val) {
+        if (!cur.left) {
+          cur.left = new BSTNode(v); this.size++;
+          steps.push({ type:'insert', val:v, cmp, redraw:true,
+            hi:[...path.map(x=>({v:x,c:C.PATH})),{ v, c:C.INSERTING }],
+            msg:`Inserted ${v} as left child of ${cur.val}.` });
+          break;
+        }
+        cur = cur.left;
+      } else {
+        if (!cur.right) {
+          cur.right = new BSTNode(v); this.size++;
+          steps.push({ type:'insert', val:v, cmp, redraw:true,
+            hi:[...path.map(x=>({v:x,c:C.PATH})),{ v, c:C.INSERTING }],
+            msg:`Inserted ${v} as right child of ${cur.val}.` });
+          break;
+        }
+        cur = cur.right;
+      }
+    }
+    return steps;
+  }
+
+  /* ── search ─────────────────────────────────── */
+  searchSteps(v) {
+    const steps = [];
+    if (!this.root) {
+      steps.push({ type:'empty', cmp:0, hi:[], msg:'Tree is empty.' });
+      return steps;
+    }
+    let cur = this.root, cmp = 0;
+    const path = [];
+    while (cur) {
+      cmp++;
+      path.push(cur.val);
+      if (v === cur.val) {
+        steps.push({ type:'found', val:v, cmp,
+          hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v:cur.val, c:C.FOUND }],
+          msg:`🎯 Found ${v} after ${cmp} comparison${cmp>1?'s':''}!` });
+        return steps;
+      }
+      steps.push({ type:'compare', val:cur.val, cmp,
+        hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v:cur.val, c:C.COMPARING }],
+        msg:`Searching for ${v}: compare with ${cur.val} → go ${v<cur.val?'left':'right'} (cmp #${cmp})` });
+      cur = v < cur.val ? cur.left : cur.right;
+    }
+    steps.push({ type:'notfound', cmp,
+      hi:path.map(x=>({v:x,c:C.PATH})),
+      msg:`❌ ${v} not found after ${cmp} comparison${cmp>1?'s':''}.` });
+    return steps;
+  }
+
+  /* ── delete ─────────────────────────────────── */
+  deleteSteps(v) {
+    const steps = [];
+    if (!this.root) {
+      steps.push({ type:'empty', cmp:0, hi:[], msg:'Tree is empty.' });
+      return steps;
+    }
+    // Find node first
+    let cur = this.root, cmp = 0;
+    const path = [];
+    let found = false;
+    while (cur) {
+      cmp++;
+      path.push(cur.val);
+      if (v === cur.val) { found = true; break; }
+      steps.push({ type:'compare', val:cur.val, cmp,
+        hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v:cur.val, c:C.COMPARING }],
+        msg:`Looking for ${v}: compare with ${cur.val} → go ${v<cur.val?'left':'right'}` });
+      cur = v < cur.val ? cur.left : cur.right;
+    }
+    if (!found) {
+      steps.push({ type:'notfound', cmp,
+        hi:path.map(x=>({v:x,c:C.PATH})),
+        msg:`❌ ${v} not found after ${cmp} comparison${cmp>1?'s':''}.` });
+      return steps;
+    }
+    steps.push({ type:'del_found', val:v, cmp,
+      hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v, c:C.DELETING }],
+      msg:`Found ${v} — preparing to delete…` });
+    // Determine case
+    let msg2;
+    if (!cur.left && !cur.right) {
+      msg2 = `${v} is a leaf — simply removing it.`;
+    } else if (!cur.left || !cur.right) {
+      const child = (cur.left || cur.right).val;
+      msg2 = `${v} has one child (${child}) — replacing with child.`;
+    } else {
+      let succ = cur.right;
+      while (succ.left) succ = succ.left;
+      msg2 = `${v} has two children — replacing value with in-order successor (${succ.val}).`;
+    }
+    steps.push({ type:'del_info', val:v, cmp,
+      hi:[...path.slice(0,-1).map(x=>({v:x,c:C.PATH})),{ v, c:C.DELETING }],
+      msg: msg2 });
+    // Perform deletion
+    this.root = this._del(this.root, v);
+    this.size--;
+    steps.push({ type:'deleted', val:v, cmp, redraw:true, hi:[],
+      msg:`✅ Deleted ${v} successfully.` });
+    return steps;
+  }
+  _del(node, v) {
+    if (!node) return null;
+    if (v < node.val)      { node.left  = this._del(node.left,  v); }
+    else if (v > node.val) { node.right = this._del(node.right, v); }
+    else {
+      if (!node.left && !node.right) return null;
+      if (!node.left)  return node.right;
+      if (!node.right) return node.left;
+      let succ = node.right;
+      while (succ.left) succ = succ.left;
+      node.val = succ.val;
+      node.right = this._del(node.right, succ.val);
+    }
+    return node;
+  }
+
+  /* ── traversals ─────────────────────────────── */
+  traversalSteps(type) {
+    const steps = [];
+    if (!this.root) {
+      steps.push({ type:'empty', cmp:0, hi:[], msg:'Tree is empty.' });
+      return steps;
+    }
+    const order = [];
+    const names = {
+      inorder:    'Inorder (L → Root → R)',
+      preorder:   'Preorder (Root → L → R)',
+      postorder:  'Postorder (L → R → Root)',
+      levelorder: 'Level-Order (BFS)',
+    };
+    if (type === 'inorder')    this._inorder(this.root, order);
+    if (type === 'preorder')   this._preorder(this.root, order);
+    if (type === 'postorder')  this._postorder(this.root, order);
+    if (type === 'levelorder') this._levelorder(this.root, order);
+
+    for (let i = 0; i < order.length; i++) {
+      steps.push({ type:'traverse', val:order[i], cmp:0,
+        hi:[
+          ...order.slice(0,i).map(x=>({v:x,c:C.VISITED})),
+          { v:order[i], c:C.TRAVERSING }
+        ],
+        order: order.slice(0,i+1),
+        msg:`${names[type]}: visiting ${order[i]}  (${i+1} / ${order.length})` });
+    }
+    steps.push({ type:'trav_done', cmp:0,
+      hi: order.map(x=>({v:x,c:C.TRAVERSING})),
+      order,
+      msg:`${names[type]} complete: [ ${order.join('  →  ')} ]` });
+    return steps;
+  }
+  _inorder(n, r) {
+    if (!n) return;
+    this._inorder(n.left, r);
+    r.push(n.val);
+    this._inorder(n.right, r);
+  }
+  _preorder(n, r) {
+    if (!n) return;
+    r.push(n.val);
+    this._preorder(n.left, r);
+    this._preorder(n.right, r);
+  }
+  _postorder(n, r) {
+    if (!n) return;
+    this._postorder(n.left, r);
+    this._postorder(n.right, r);
+    r.push(n.val);
+  }
+  _levelorder(n, r) {
+    if (!n) return;
+    const q = [n];
+    while (q.length) {
+      const cur = q.shift();
+      r.push(cur.val);
+      if (cur.left)  q.push(cur.left);
+      if (cur.right) q.push(cur.right);
+    }
+  }
+
+  /* ── metrics ────────────────────────────────── */
+  height(n = this.root) { return n ? 1 + Math.max(this.height(n.left), this.height(n.right)) : 0; }
+  isBalanced(n = this.root) {
+    if (!n) return true;
+    return Math.abs(this.height(n.left) - this.height(n.right)) <= 1
+           && this.isBalanced(n.left) && this.isBalanced(n.right);
+  }
+
+  /* ── layout ─────────────────────────────────── */
+  calcPositions(W, H) {
+    if (!this.root) return;
+    const io = [];
+    this._collectInorder(this.root, io);
+    const n = io.length;
+    const padX = 50, padY = 56;
+    const h = this.height();
+    const spacingX = Math.min(68, (W - 2*padX) / Math.max(n, 1));
+    const spacingY = Math.min(82, (H - 2*padY) / Math.max(h, 1));
+    const totalW   = spacingX * n;
+    const offsetX  = (W - totalW) / 2 + spacingX / 2;
+    io.forEach((node, i) => { node.x = offsetX + i * spacingX; });
+    this._assignY(this.root, 0, padY, spacingY);
+  }
+  _collectInorder(n, r) {
+    if (!n) return;
+    this._collectInorder(n.left, r);
+    r.push(n);
+    this._collectInorder(n.right, r);
+  }
+  _assignY(n, lv, startY, sy) {
+    if (!n) return;
+    n.y = startY + lv * sy;
+    this._assignY(n.left,  lv + 1, startY, sy);
+    this._assignY(n.right, lv + 1, startY, sy);
+  }
+
+  /* ── helpers ────────────────────────────────── */
+  allNodes() {
+    const r = [];
+    this._walkAll(this.root, r);
+    return r;
+  }
+  _walkAll(n, r) {
+    if (!n) return;
+    r.push(n);
+    this._walkAll(n.left, r);
+    this._walkAll(n.right, r);
+  }
+  edges() {
+    const r=[];
+    const walk = (n) => {
+      if (!n) return;
+      if (n.left)  { r.push([n, n.left]);  walk(n.left);  }
+      if (n.right) { r.push([n, n.right]); walk(n.right); }
+    };
+    walk(this.root); return r;
+  }
+  toJSON() { return JSON.stringify(this._toObj(this.root), null, 2); }
+  _toObj(n) { return n ? { val:n.val, left:this._toObj(n.left), right:this._toObj(n.right) } : null; }
+}
+
+/* ═══════════════════════════════════════════════
+   RENDERER
+═══════════════════════════════════════════════ */
+const svg    = document.getElementById('tree-svg');
+const gEdges = document.getElementById('g-edges');
+const gNodes = document.getElementById('g-nodes');
+const emptyG = document.getElementById('g-empty');
+
+let bst = new BST();
+let hiMap = {};   // val → color for current highlights
+let animTimer  = null;
+let animActive = false;
+let animSpeed  = 750;
+let lastCmp    = 0;
+
+function svgSize() {
+  const r = svg.getBoundingClientRect();
+  return { w: r.width || 800, h: r.height || 500 };
+}
+
+function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+function render(newVal = null) {
+  const { w, h } = svgSize();
+  bst.calcPositions(w, h);
+  gEdges.innerHTML = '';
+  gNodes.innerHTML = '';
+
+  const isEmpty = !bst.root;
+  emptyG.style.display = isEmpty ? '' : 'none';
+  if (isEmpty) { updateMetrics(); return; }
+
+  /* edges */
+  bst.edges().forEach(([from, to]) => {
+    const line = ns('line');
+    line.setAttribute('x1', from.x); line.setAttribute('y1', from.y);
+    line.setAttribute('x2', to.x);   line.setAttribute('y2', to.y);
+    line.setAttribute('stroke', 'var(--edge-color)');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('id', `e-${from.val}-${to.val}`);
+    gEdges.appendChild(line);
+  });
+
+  /* nodes */
+  bst.allNodes().forEach(node => {
+    const color  = hiMap[node.val] ?? C.DEFAULT;
+    const isNew  = node.val === newVal;
+    const g      = ns('g');
+    g.setAttribute('id', `n-${node.val}`);
+    g.setAttribute('transform', `translate(${node.x},${node.y})`);
+    g.style.cursor = 'pointer';
+
+    const circle = ns('circle');
+    circle.setAttribute('r', '24');
+    circle.setAttribute('fill', color);
+    circle.setAttribute('filter', 'url(#shadow)');
+    if (isNew) circle.classList.add('anim-pop');
+
+    const txt = ns('text');
+    txt.setAttribute('text-anchor', 'middle');
+    txt.setAttribute('dominant-baseline', 'central');
+    txt.setAttribute('fill', '#fff');
+    txt.setAttribute('font-size', node.val > 999 || node.val < -99 ? '11' : '13');
+    txt.setAttribute('font-weight', '600');
+    txt.setAttribute('font-family', "Segoe UI,sans-serif");
+    txt.setAttribute('pointer-events', 'none');
+    txt.setAttribute('user-select', 'none');
+    txt.textContent = node.val;
+
+    g.appendChild(circle);
+    g.appendChild(txt);
+
+    g.addEventListener('mouseenter', e => showTip(e, node));
+    g.addEventListener('mousemove',  e => moveTip(e));
+    g.addEventListener('mouseleave', hideTip);
+
+    gNodes.appendChild(g);
+  });
+
+  updateMetrics();
+}
+
+function applyHi(hiArr) {
+  /* reset all circles to default */
+  bst.allNodes().forEach(n => {
+    const g = document.getElementById(`n-${n.val}`);
+    if (!g) return;
+    const c = g.querySelector('circle');
+    if (c) { c.setAttribute('fill', C.DEFAULT); c.removeAttribute('filter'); c.setAttribute('filter','url(#shadow)'); }
+  });
+  /* apply */
+  hiArr.forEach(({ v, c }) => {
+    const g = document.getElementById(`n-${v}`);
+    if (!g) return;
+    const ci = g.querySelector('circle');
+    if (!ci) return;
+    ci.setAttribute('fill', c);
+    if (c === C.COMPARING || c === C.FOUND || c === C.TRAVERSING) {
+      ci.setAttribute('filter', 'url(#glow)');
+    }
+  });
+  /* rebuild map */
+  hiMap = {};
+  hiArr.forEach(({ v, c }) => { hiMap[v] = c; });
+}
+
+function updateMetrics() {
+  document.getElementById('mHeight').textContent = bst.height();
+  document.getElementById('mNodes').textContent  = bst.size;
+  document.getElementById('mCmp').textContent    = lastCmp;
+  const bal = bst.size === 0 ? '—' : (bst.isBalanced() ? '✅ Yes' : '❌ No');
+  document.getElementById('mBal').textContent    = bal;
+  document.getElementById('mBal').style.fontSize = bst.size === 0 ? '1.4rem' : '.95rem';
+}
+
+/* ═══════════════════════════════════════════════
+   ANIMATION ENGINE
+═══════════════════════════════════════════════ */
+const ICONS = {
+  compare:'🔍', insert:'✅', found:'🎯', notfound:'❌', dup:'⚠️',
+  del_found:'🗑', del_info:'ℹ️', deleted:'✅', traverse:'🔄',
+  trav_done:'✅', empty:'⚠️', default:'ℹ️'
+};
+
+function runSteps(steps) {
+  stopAnim();
+  animActive = true;
+  lastCmp = 0;
+  disableControls(true);
+  document.getElementById('stopBtn').disabled = false;
+
+  let i = 0;
+  const tick = () => {
+    if (i >= steps.length || !animActive) { finishAnim(); return; }
+    const s = steps[i++];
+    /* message */
+    setMsg(ICONS[s.type] ?? 'ℹ️', s.msg);
+    /* comparisons */
+    if (s.cmp !== undefined) { lastCmp = s.cmp; }
+    /* redraw tree (after structural change) */
+    if (s.redraw) { hiMap = {}; render(s.val); }
+    /* highlights */
+    if (s.hi) { applyHi(s.hi); }
+    /* traversal result */
+    if (s.order) {
+      document.getElementById('travResult').textContent = s.order.join(' → ');
+    }
+    updateMetrics();
+    animTimer = setTimeout(tick, animSpeed);
+  };
+  tick();
+}
+
+function finishAnim() {
+  animActive = false;
+  document.getElementById('stopBtn').disabled = true;
+  disableControls(false);
+  /* fade highlights back to default */
+  setTimeout(() => { hiMap = {}; render(); }, animSpeed * 1.2);
+}
+
+function stopAnim() {
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  if (animActive) {
+    animActive = false;
+    document.getElementById('stopBtn').disabled = true;
+    disableControls(false);
+    hiMap = {};
+    render();
+  }
+}
+
+function disableControls(off) {
+  document.querySelectorAll('.sidebar .btn:not(#stopBtn), .sidebar input')
+    .forEach(el => el.disabled = off);
+}
+
+/* ═══════════════════════════════════════════════
+   EVENT HANDLERS
+═══════════════════════════════════════════════ */
+function doInsert() {
+  const el  = document.getElementById('insertVal');
+  const val = parseInt(el.value, 10);
+  if (isNaN(val)) { setMsg('⚠️','Please enter a valid number.'); return; }
+  if (val < -9999 || val > 9999) { setMsg('⚠️','Value must be between −9999 and 9999.'); return; }
+  lastCmp = 0;
+  const steps = bst.insertSteps(val);
+  el.value = '';
+  runSteps(steps);
+}
+
+function doDelete() {
+  const el  = document.getElementById('deleteVal');
+  const val = parseInt(el.value, 10);
+  if (isNaN(val)) { setMsg('⚠️','Please enter a valid number.'); return; }
+  lastCmp = 0;
+  const steps = bst.deleteSteps(val);
+  el.value = '';
+  runSteps(steps);
+}
+
+function doSearch() {
+  const el  = document.getElementById('searchVal');
+  const val = parseInt(el.value, 10);
+  if (isNaN(val)) { setMsg('⚠️','Please enter a valid number.'); return; }
+  lastCmp = 0;
+  const steps = bst.searchSteps(val);
+  el.value = '';
+  runSteps(steps);
+}
+
+function doTraversal(type) {
+  document.getElementById('travResult').textContent = 'Traversing…';
+  lastCmp = 0;
+  runSteps(bst.traversalSteps(type));
+}
+
+function doRandom() {
+  const n = Math.min(parseInt(document.getElementById('randCount').value, 10) || 8, 25);
+  stopAnim();
+  clearTree(false);
+  const vals = new Set();
+  while (vals.size < n) vals.add(Math.floor(Math.random() * 100) + 1);
+  vals.forEach(v => bst.insertSteps(v)); /* inserts without animation */
+  hiMap = {};
+  render();
+  setMsg('🎲', `Inserted ${n} random values: [${[...vals].join(', ')}]`);
+}
+
+function clearTree(msg = true) {
+  stopAnim();
+  bst   = new BST();
+  hiMap = {};
+  lastCmp = 0;
+  gEdges.innerHTML = '';
+  gNodes.innerHTML = '';
+  emptyG.style.display = '';
+  document.getElementById('travResult').textContent = 'Result will appear here…';
+  updateMetrics();
+  if (msg) setMsg('🗑', 'Tree cleared.');
+}
+
+function setSpeed(v) {
+  animSpeed = +v;
+  document.getElementById('speedLbl').textContent = `${v} ms / step`;
+}
+
+/* ═══════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.dataset.theme === 'dark';
+  html.dataset.theme = dark ? 'light' : 'dark';
+  const btn = document.getElementById('themeBtn');
+  btn.textContent = dark ? '🌙 Dark' : '☀️ Light';
+  render(); /* edges pick up new CSS variable */
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════════ */
+function exportJSON() {
+  if (!bst.root) { setMsg('⚠️','Tree is empty — nothing to export.'); return; }
+  const blob = new Blob([bst.toJSON()], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bst.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setMsg('📄','Tree exported as bst.json');
+}
+
+function exportImage() {
+  if (!bst.root) { setMsg('⚠️','Tree is empty — nothing to export.'); return; }
+  const serializer = new XMLSerializer();
+  const { w, h }   = svgSize();
+  /* inline the CSS vars so the SVG is self-contained */
+  const cs   = getComputedStyle(document.documentElement);
+  const bg   = cs.getPropertyValue('--svg-bg').trim();
+  const edge = cs.getPropertyValue('--edge-color').trim();
+  let svgStr = serializer.serializeToString(svg);
+  svgStr = svgStr.replace(/var\(--svg-bg\)/g, bg)
+                 .replace(/var\(--edge-color\)/g, edge);
+  /* wrap with explicit background rect */
+  svgStr = svgStr.replace('<svg ', `<svg style="background:${bg}" `);
+  const canvas = document.createElement('canvas');
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const blob = new Blob([svgStr], { type:'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  img.onload = () => {
+    ctx.fillStyle = bg || '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href     = canvas.toDataURL('image/png');
+    a.download = 'bst.png';
+    a.click();
+    setMsg('🖼','Tree exported as bst.png');
+  };
+  img.onerror = () => setMsg('❌','Image export failed. Try a different browser.');
+  img.src = url;
+}
+
+/* ═══════════════════════════════════════════════
+   TOOLTIP
+═══════════════════════════════════════════════ */
+const tip = document.getElementById('tooltip');
+function showTip(e, node) {
+  const lh = bst.height(node.left);
+  const rh = bst.height(node.right);
+  tip.innerHTML =
+    `<strong>Value: ${node.val}</strong><br>` +
+    `Left height:  ${lh}<br>` +
+    `Right height: ${rh}<br>` +
+    `Balance factor: <strong style="color:${Math.abs(lh-rh)>1?'#ef4444':'#22c55e'}">${lh-rh}</strong>`;
+  moveTip(e);
+  tip.classList.add('show');
+}
+function moveTip(e) {
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top  = (e.clientY - 10) + 'px';
+}
+function hideTip()  { tip.classList.remove('show'); }
+
+/* ═══════════════════════════════════════════════
+   MESSAGE BAR
+═══════════════════════════════════════════════ */
+function setMsg(icon, text) {
+  document.getElementById('msgIcon').textContent = icon;
+  document.getElementById('msgText').textContent = text;
+}
+
+/* ═══════════════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════════════ */
+document.getElementById('insertVal').addEventListener('keydown', e => e.key === 'Enter' && doInsert());
+document.getElementById('deleteVal').addEventListener('keydown', e => e.key === 'Enter' && doDelete());
+document.getElementById('searchVal').addEventListener('keydown', e => e.key === 'Enter' && doSearch());
+
+/* ═══════════════════════════════════════════════
+   RESIZE
+═══════════════════════════════════════════════ */
+let resizeT;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(render, 180); });
+
+/* ═══════════════════════════════════════════════
+   INIT — seed with demo tree
+═══════════════════════════════════════════════ */
+(function init() {
+  [50, 30, 70, 20, 40, 60, 80, 10, 25].forEach(v => bst.insertSteps(v));
+  hiMap = {};
+  render();
+  setMsg('🌳', 'Demo BST loaded! Try inserting, deleting, or searching. Hover a node for details.');
+})();
+</script>
+</body>
+</html>
