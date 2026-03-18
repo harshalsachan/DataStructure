@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BST Visualizer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-icon">🌳</span>
+      <h1>BST Visualizer</h1>
+    </div>
+
+    <!-- Colour legend -->
+    <div class="legend" aria-label="Node colour legend">
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#4299e1"></span>Default
+      </span>
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#48bb78"></span>Inserted / Found
+      </span>
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#f56565"></span>Deleting / Not Found
+      </span>
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#ecc94b"></span>Search Path
+      </span>
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#ed8936"></span>Traversal Current
+      </span>
+      <span class="legend-item">
+        <span class="legend-dot" style="background:#9f7aea"></span>Traversal Visited
+      </span>
+    </div>
+
+    <button id="theme-toggle" class="theme-btn" aria-label="Toggle light/dark theme" title="Toggle theme">
+      <span id="theme-icon">☀️</span>
+    </button>
+  </header>
+
+  <!-- ── Main Layout ────────────────────────────────────── -->
+  <main class="app-main">
+
+    <!-- Left panel: controls -->
+    <aside class="controls-panel" aria-label="Controls">
+
+      <!-- Operations -->
+      <div class="panel-section">
+        <p class="section-title">Operations</p>
+        <input
+          id="node-input"
+          class="value-input"
+          type="number"
+          placeholder="Enter value…"
+          min="-9999"
+          max="9999"
+          aria-label="Node value"
+        />
+        <div class="btn-row">
+          <button id="btn-insert" class="btn btn-insert" title="Insert value (Enter)">Insert</button>
+          <button id="btn-delete" class="btn btn-delete" title="Delete value">Delete</button>
+          <button id="btn-search" class="btn btn-search" title="Search value">Search</button>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- Traversals -->
+      <div class="panel-section">
+        <p class="section-title">Traversals</p>
+        <div class="btn-grid">
+          <button id="btn-inorder"   class="btn btn-traversal">Inorder</button>
+          <button id="btn-preorder"  class="btn btn-traversal">Preorder</button>
+          <button id="btn-postorder" class="btn btn-traversal">Postorder</button>
+          <button id="btn-levelorder"class="btn btn-traversal">Level-Order</button>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- Animation speed -->
+      <div class="panel-section">
+        <p class="section-title">Animation Speed</p>
+        <div class="speed-row">
+          <span>Slow</span>
+          <input id="speed-slider" type="range" min="1" max="10" value="3"
+                 aria-label="Animation speed" />
+          <span>Fast</span>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- Utilities -->
+      <div class="panel-section">
+        <p class="section-title">Utilities</p>
+        <div class="btn-grid">
+          <button id="btn-sample"      class="btn btn-util">Sample Tree</button>
+          <button id="btn-random"      class="btn btn-util">Random Tree</button>
+          <button id="btn-export-json" class="btn btn-util">Export JSON</button>
+          <button id="btn-export-img"  class="btn btn-util">Export Image</button>
+          <button id="btn-clear"       class="btn btn-util" style="grid-column:span 2">Clear Tree</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: SVG visualization -->
+    <section class="viz-section" aria-label="Tree visualization">
+
+      <div class="viz-container" id="viz-container">
+        <svg id="bst-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Binary search tree diagram">
+          <g id="edges-layer"></g>
+          <g id="nodes-layer"></g>
+        </svg>
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🌳</div>
+          <p>Your BST is empty</p>
+          <p class="hint">Insert values or click <strong>Sample Tree</strong></p>
+        </div>
+      </div>
+
+      <!-- Metrics bar -->
+      <div class="metrics-bar" role="status" aria-live="polite">
+        <div class="metric">
+          <span class="metric-label">Height</span>
+          <span class="metric-value" id="metric-height">—</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Nodes</span>
+          <span class="metric-value" id="metric-nodes">—</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Balanced</span>
+          <span class="metric-value" id="metric-balanced">—</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Comparisons</span>
+          <span class="metric-value" id="metric-comparisons">—</span>
+        </div>
+        <div class="anim-indicator" id="anim-indicator" aria-hidden="true">
+          <div class="spinner"></div>
+          Animating…
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right panel: traversal result + log -->
+    <aside class="info-panel" aria-label="Results and log">
+
+      <!-- Traversal result -->
+      <div class="panel-section" style="flex:0 0 auto">
+        <p class="section-title">Traversal Result</p>
+        <div id="traversal-result" class="traversal-result-box" aria-live="polite">
+          <span class="placeholder">Run a traversal to see results…</span>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- Operation log -->
+      <div class="panel-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <p class="section-title">Operation Log</p>
+        <div id="op-log" class="op-log" aria-live="polite" aria-relevant="additions"></div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="bst.js"></script>
+  <script src="visualizer.js"></script>
+</body>
+</html>
